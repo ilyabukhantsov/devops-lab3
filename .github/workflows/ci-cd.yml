@@ -28,16 +28,14 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
-          cache-dependency-path: 'devops/Notes Service/pom.xml'
 
       - name: Run Java Linting (Checkstyle)
-        working-directory: './devops/Notes Service'
         run: mvn checkstyle:check-style -Dcheckstyle.failOnViolation=true
 
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: 'devops/Notes Service/Dockerfile'
+          dockerfile: Dockerfile
           ignore: 'DL3007'
 
       - name: Lint Shell Scripts
@@ -59,10 +57,8 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
-          cache-dependency-path: 'devops/Notes Service/pom.xml'
 
       - name: Run Tests with Coverage Check
-        working-directory: './devops/Notes Service'
         run: mvn clean test
 
       - name: Upload Coverage Report Artifact
@@ -70,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-coverage-report
-          path: 'devops/Notes Service/target/site/jacoco/'
+          path: target/site/jacoco/
           retention-days: 7
 
   build-and-push:
@@ -109,12 +105,9 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
-          context: './devops/Notes Service'
+          context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-
-
