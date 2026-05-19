@@ -2,42 +2,57 @@ package com.example.lab1.service;
 
 import com.example.lab1.model.Note;
 import com.example.lab1.repository.NoteRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
-import java.util.Optional;
+import org.springframework.stereotype.Service;
 
+/**
+ * Production implementation of the NoteService.
+ */
 @Service
-public class NoteServiceImpl implements NoteService {
+public final class NoteServiceImpl implements NoteService {
 
+    /**
+     * Repository dependency for note data access.
+     */
     private final NoteRepository repository;
 
-    public NoteServiceImpl(NoteRepository repository) {
-        this.repository = repository;
+    /**
+     * Constructs a new NoteServiceImpl instance.
+     * @param noteRepository the note repository dependency
+     */
+    public NoteServiceImpl(final NoteRepository noteRepository) {
+        this.repository = noteRepository;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    @Transactional(readOnly = true)
     public List<Note> findAll() {
         return repository.findAll();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    @Transactional(readOnly = true)
-    public Optional<Note> findById(Long id) {
-        return repository.findById(id);
+    public Note findById(final Long id) {
+        return repository.findById(id).orElse(null);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    @Transactional
-    public Note save(Note note) {
+    public Note save(final Note note) {
         return repository.save(note);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    @Transactional
-    public void deleteById(Long id) {
+    public void deleteById(final Long id) {
         repository.deleteById(id);
     }
 }
