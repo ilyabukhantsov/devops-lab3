@@ -30,7 +30,7 @@ jobs:
           cache: 'maven'
 
       - name: Run Java Linting (Checkstyle)
-        run: mvn checkstyle:check-style -Dcheckstyle.failOnViolation=true
+        run: mvn checkstyle:check -Dcheckstyle.failOnViolation=true
 
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
@@ -111,3 +111,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
