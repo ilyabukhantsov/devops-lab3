@@ -10,3 +10,4 @@ public interface NoteService {
     Note save(Note note);
     void deleteById(Long id);
 }
+
