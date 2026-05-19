@@ -1,33 +1,35 @@
 #!/bin/bash
 set -e
 
-REPO_URL="https://github.com/ilyabukhantsov/devops"
-PROJECT_DIR="Notes Service"
-JAR_NAME="mywebapp.jar"
-
-echo "--- [1/7] Updating system and installing packages (Java 21, Maven, Git) ---"
+echo "--- [1/6] Updating system and installing Docker & Nginx ---"
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y nginx mariadb-server openjdk-21-jdk sudo git maven curl
+sudo apt install -y nginx sudo curl git
 
-echo "--- [2/7] Creating users ---"
+if ! command -v docker &>/dev/null; then
+  curl -fsSL https://get.docker.com -o get-docker.sh
+  sudo sh get-docker.sh
+  rm get-docker.sh
+fi
+
+echo "--- [2/6] Creating users ---"
 
 create_user_safe() {
-    local username=$1
-    if id "$username" &>/dev/null; then
-        echo "User '$username' already exists, skipping..."
-    else
-        if getent group "$username" &>/dev/null; then
-            sudo groupdel "$username" 2>/dev/null || true
-        fi
-        
-        if [ "$username" == "app" ]; then
-            sudo useradd -r -m -d /home/app -s /usr/sbin/nologin app
-        else
-            sudo useradd -m -s /bin/bash "$username"
-            echo "$username:12345678" | sudo chpasswd
-        fi
-        echo "User '$username' created successfully."
+  local username=$1
+  if id "$username" &>/dev/null; then
+    echo "User '$username' already exists, skipping..."
+  else
+    if getent group "$username" &>/dev/null; then
+      sudo groupdel "$username" 2>/dev/null || true
     fi
+
+    if [ "$username" = "app" ]; then
+      sudo useradd -r -m -d /home/app -s /usr/sbin/nologin app
+    else
+      sudo useradd -m -s /bin/bash "$username"
+      echo "$username:12345678" | sudo chpasswd
+    fi
+    echo "User '$username' created successfully."
+  fi
 }
 
 create_user_safe "app"
@@ -41,55 +43,34 @@ id -nG teacher | grep -q "\bsudo\b" || sudo usermod -aG sudo teacher
 sudo chage -d 0 teacher 2>/dev/null || true
 sudo chage -d 0 operator 2>/dev/null || true
 
-echo "--- [3/7] Configuring MariaDB (notes_db) ---"
-sudo systemctl start mariadb
-sudo systemctl enable mariadb
-sudo mysql -e "CREATE DATABASE IF NOT EXISTS notes_db;"
-sudo mysql -e "CREATE USER IF NOT EXISTS 'app_user'@'localhost' IDENTIFIED BY 'secure_password';"
-sudo mysql -e "GRANT ALL PRIVILEGES ON notes_db.* TO 'app_user'@'localhost';"
-sudo mysql -e "FLUSH PRIVILEGES;"
+echo "--- [3/6] Starting PostgreSQL Container ---"
+sudo docker run -d \
+  --name notes-db \
+  --restart always \
+  -e POSTGRES_DB=notes_db \
+  -e POSTGRES_USER=app_user \
+  -e POSTGRES_PASSWORD=secure_password \
+  -p 5432:5432 \
+  postgres:16-alpine
 
-echo "--- [4/7] Cloning repository and building project ---"
-BUILD_DIR="/tmp/app-build"
-sudo rm -rf $BUILD_DIR
-mkdir -p $BUILD_DIR
-cd $BUILD_DIR
-
-echo "Cloning from GitHub..."
-git clone "$REPO_URL" .
-
-if [ -d "$PROJECT_DIR" ]; then
-    cd "$PROJECT_DIR"
-fi
-
-echo "Building JAR via Maven (skipping tests)..."
-mvn clean package -DskipTests
-
-sudo cp target/mywebapp.jar /home/app/mywebapp.jar
-sudo chown app:app /home/app/mywebapp.jar
-
-echo "--- [5/7] Configuring Systemd (Service Only, No Socket) ---"
-sudo systemctl stop mywebapp.socket 2>/dev/null || true
-sudo systemctl disable mywebapp.socket 2>/dev/null || true
-sudo rm -f /etc/systemd/system/mywebapp.socket
-
+echo "--- [4/6] Configuring Systemd Unit for App Container ---"
 cat <<EOF | sudo tee /etc/systemd/system/mywebapp.service
 [Unit]
-Description=Notes Service (KPI Lab 1)
-After=network.target mariadb.service
+Description=Notes Service Container (KPI Lab 3)
+After=network.target
 
 [Service]
-User=app
-Group=app
-WorkingDirectory=/home/app
-# Java handles port 5200 directly
-ExecStart=/usr/bin/java -jar /home/app/mywebapp.jar \\
-    --server.port=5200 \\
-    --spring.datasource.url=jdbc:mariadb://127.0.0.1:3306/notes_db \\
-    --spring.datasource.username=app_user \\
-    --spring.datasource.password=secure_password
 Restart=always
 RestartSec=5
+ExecStartPre=-/usr/bin/docker rm -f mywebapp-app
+ExecStart=/usr/bin/docker run --rm --name mywebapp-app \\
+    -p 5200:8080 \\
+    -e SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/notes_db \\
+    -e SPRING_DATASOURCE_USERNAME=app_user \\
+    -e SPRING_DATASOURCE_PASSWORD=secure_password \\
+    ghcr.io/ilyabukhantsov/devops/notes-service:latest
+
+ExecStop=/usr/bin/docker stop mywebapp-app
 
 [Install]
 WantedBy=multi-user.target
@@ -97,9 +78,8 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable mywebapp.service
-sudo systemctl restart mywebapp.service
 
-echo "--- [6/7] Configuring Nginx (Reverse Proxy) ---"
+echo "--- [5/6] Configuring Nginx (Reverse Proxy) ---"
 cat <<EOF | sudo tee /etc/nginx/sites-available/mywebapp
 server {
     listen 80;
@@ -111,7 +91,6 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         
-        # Increased timeouts to prevent 504 Gateway Timeout during startup
         proxy_connect_timeout 10s;
         proxy_read_timeout 60s;
     }
@@ -122,7 +101,7 @@ sudo ln -sf /etc/nginx/sites-available/mywebapp /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo systemctl restart nginx
 
-echo "--- [7/7] Configuring sudoers for operator and files ---"
+echo "--- [6/6] Configuring sudoers for operator ---"
 cat <<EOF | sudo tee /etc/sudoers.d/operator-rules
 operator ALL=(ALL) NOPASSWD: /usr/bin/systemctl start mywebapp.service
 operator ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop mywebapp.service
@@ -137,8 +116,5 @@ echo "6" | sudo tee /home/student/gradebook
 sudo chown student:student /home/student/gradebook
 
 echo "-------------------------------------------------------"
-echo "INFRASTRUCTURE AND SERVER ARE READY!"
-echo "Access the site: http://<Your_VM_IP>/notes"
-echo "Or via Port Forwarding: http://localhost:8080/notes"
-echo "Check logs: sudo journalctl -u mywebapp.service -f"
+echo "TARGET NODE ENVIRONMENT IS READY!"
 echo "-------------------------------------------------------"
