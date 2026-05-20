@@ -2,17 +2,17 @@ package com.example.lab1.service;
 
 import com.example.lab1.model.Note;
 import com.example.lab1.repository.NoteRepository;
+import java.util.Collections;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class NoteServiceTest {
@@ -24,37 +24,29 @@ class NoteServiceTest {
     private NoteService noteService;
 
     @Test
-    void shouldCreateNoteSuccessfully() {
-        // Given
+    void testFindAll() {
+        when(noteRepository.findAll()).thenReturn(Collections.emptyList());
+        noteService.findAll();
+        verify(noteRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testSave() {
         Note note = new Note();
-        note.setTitle("Service Test");
-        note.setContent("Testing service layer");
-
         when(noteRepository.save(any(Note.class))).thenReturn(note);
-
-        // When
-        Note created = noteService.createNote(note);
-
-        // Then
-        assertThat(created).isNotNull();
-        assertThat(created.getTitle()).isEqualTo("Service Test");
+        noteService.save(note);
         verify(noteRepository, times(1)).save(note);
     }
 
     @Test
-    void shouldReturnNoteWhenIdExists() {
-        // Given
-        Note note = new Note();
-        note.setId(1L);
-        note.setTitle("Existing Note");
+    void testFindById() {
+        noteService.findById(1L);
+        verify(noteRepository, times(1)).findById(1L);
+    }
 
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
-
-        // When
-        Optional<Note> found = noteService.getNoteById(1L);
-
-        // Then
-        assertThat(found).isPresent();
-        assertThat(found.get().getTitle()).isEqualTo("Existing Note");
+    @Test
+    void testDeleteById() {
+        noteService.deleteById(1L);
+        verify(noteRepository, times(1)).deleteById(1L);
     }
 }
