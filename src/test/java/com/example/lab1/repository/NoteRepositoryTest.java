@@ -9,22 +9,32 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integration tests for NoteRepository.
+ */
 @DataJpaTest
 class NoteRepositoryTest {
 
+    /**
+     * Autowired instance of NoteRepository.
+     */
     @Autowired
     private NoteRepository noteRepository;
 
+    /**
+     * Tests saving and retrieving notes.
+     */
     @Test
-    void shouldSaveAndFindNotes() {
+    void shouldSaveAndFindAllNotes() {
         Note note = new Note();
-        note.setTitle("Lab 3");
-        note.setContent("Testing");
+
+        note.setTitle("Repository Test");
+        note.setContent("Testing JpaRepository behavior");
 
         noteRepository.save(note);
         List<Note> notes = noteRepository.findAll();
 
         assertThat(notes).isNotEmpty();
-        assertThat(notes.get(0).getTitle()).isEqualTo("Lab 3");
+        assertThat(notes.size()).isEqualTo(1);
     }
 }
