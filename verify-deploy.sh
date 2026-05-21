@@ -2,7 +2,6 @@
 TARGET_IP=$1
 PORT=$2
 
-# Використовуємо знайдений робочий ендпоінт
 API_PATH="/health/ready"
 URL="http://${TARGET_IP}:${PORT}${API_PATH}"
 
@@ -15,7 +14,6 @@ else
     exit 1
 fi
 
-# Для перевірки заголовка Nginx б'ємо в корінь сервера
 ROOT_URL="http://${TARGET_IP}:${PORT}"
 SERVER_HEADER=$(curl -sI "${ROOT_URL}" | grep -i "Server:" | tr -d '\r')
 

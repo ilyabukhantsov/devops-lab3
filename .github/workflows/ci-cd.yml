@@ -148,15 +148,21 @@ jobs:
           docker stop app || true
           docker rm app || true
           
+          cat <<EOF > .env
+          DB_URL=${{ secrets.DB_URL }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          EOF
+          
           docker run -d \
             --name app \
             -p 8080:8080 \
             --add-host=host.docker.internal:host-gateway \
-            -e SPRING_DATASOURCE_URL=jdbc:mariadb://host.docker.internal:3306/notes_db \
-            -e SPRING_DATASOURCE_USERNAME=root \
-            -e SPRING_DATASOURCE_PASSWORD=root \
+            --env-file .env \
             --restart always \
             ghcr.io/${{ github.repository }}:latest
+          
+          rm -f .env
           
           docker image prune -f
 
