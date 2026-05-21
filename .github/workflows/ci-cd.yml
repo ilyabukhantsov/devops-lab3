@@ -121,20 +121,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Execute Remote Deployment via SSH
+      - name: Local Docker Compose Deployment
         run: |
-          ssh -i ~/.ssh/id_rsa_deploy -o StrictHostKeyChecking=no ${{ vars.TARGET_VM_USER }}@${{ vars.TARGET_VM_IP }} << 'EOF'
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull ghcr.io/${{ github.repository }}:latest
-            cd /path/to/your/deployment/dir
-            docker compose up -d --force-recreate app
-            docker image prune -f
-          EOF
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker pull ghcr.io/${{ github.repository }}:latest
+          docker compose up -d --force-recreate app
+          docker image prune -f
 
       - name: Wait for service initialization
-        run: sleep 10
+        run: sleep 5
 
       - name: Run Verification Script
         run: |
           chmod +x ./verify-deploy.sh
-          ./verify-deploy.sh ${{ vars.TARGET_VM_IP }} 80
+          ./verify-deploy.sh 127.0.0.1 80
