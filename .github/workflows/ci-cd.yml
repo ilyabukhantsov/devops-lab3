@@ -73,12 +73,27 @@ jobs:
 
   build-and-push:
     name: Build & Push Docker Image
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, deploy] 
     needs: test
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+      - name: Create Maven Settings with Mirror
+        run: |
+          mkdir -p .m2
+          cat <<EOF > .m2/settings.xml
+          <settings>
+            <mirrors>
+              <mirror>
+                <id>maven-central-uk</id>
+                <name>UK Maven Mirror</name>
+                <url>https://uk.maven.org/maven2/</url>
+                <mirrorOf>central</mirrorOf>
+              </mirror>
+            </mirrors>
+          </settings>
+          EOF
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -141,7 +156,7 @@ jobs:
           docker image prune -f
 
       - name: Wait for service initialization
-        run: sleep 10
+        run: sleep 15
 
       - name: Run Verification Script
         run: |
