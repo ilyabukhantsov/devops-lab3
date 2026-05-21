@@ -4,10 +4,35 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
+  tests-and-quality:
+    name: Code Quality and Unit Tests
+    runs-on: [self-hosted, deploy]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run Checkstyle (Linter)
+        run: mvn checkstyle:check
+
+      - name: Run Unit Tests
+        run: mvn test
+
   build-and-push:
     name: Build and Push Docker Image
     runs-on: [self-hosted, deploy]
+    needs: tests-and-quality
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
