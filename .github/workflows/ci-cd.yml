@@ -111,7 +111,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-  deploy:
+deploy:
     name: Deploy and Verify
     runs-on: [self-hosted, deploy]
     needs: build-and-push
@@ -122,7 +122,7 @@ jobs:
 
       - name: Execute Remote Deployment via SSH
         run: |
-          ssh -i ~/.ssh/id_rsa_deploy -o StrictHostKeyChecking=no ${{ secrets.TARGET_VM_USER }}@${{ secrets.TARGET_VM_IP }} << 'EOF'
+          ssh -i ~/.ssh/id_rsa_deploy -p 2223 -o StrictHostKeyChecking=no ${{ vars.TARGET_VM_USER }}@${{ vars.TARGET_VM_IP }} << 'EOF'
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/${{ github.repository }}:latest
             cd /path/to/your/deployment/dir
@@ -136,4 +136,4 @@ jobs:
       - name: Run Verification Script
         run: |
           chmod +x ./verify-deploy.sh
-          ./verify-deploy.sh ${{ secrets.TARGET_VM_IP }} 80
+          ./verify-deploy.sh ${{ vars.TARGET_VM_IP }} 2223
