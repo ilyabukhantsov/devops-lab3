@@ -22,7 +22,7 @@ class NoteRepositoryTest {
     private NoteRepository noteRepository;
 
     /**
-     * Tests saving and retrieving notes.
+     * Test saving and retrieving notes.
      */
     @Test
     void shouldSaveAndFindAllNotes() {
