@@ -121,11 +121,20 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Local Docker Compose Deployment
+      - name: Local Docker Run Deployment
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker pull ghcr.io/${{ github.repository }}:latest
-          docker compose up -d --force-recreate app
+          
+          docker stop app || true
+          docker rm app || true
+          
+          docker run -d \
+            --name app \
+            -p 80:8080 \
+            --restart always \
+            ghcr.io/${{ github.repository }}:latest
+          
           docker image prune -f
 
       - name: Wait for service initialization
