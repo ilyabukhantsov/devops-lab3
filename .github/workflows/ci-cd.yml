@@ -111,3 +111,29 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+  deploy:
+    name: Deploy and Verify
+    runs-on: [self-hosted, deploy]
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Execute Remote Deployment via SSH
+        run: |
+          ssh -i ~/.ssh/id_rsa_deploy -o StrictHostKeyChecking=no user@target_vm_ip << 'EOF'
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull ghcr.io/${{ github.repository }}:latest
+            cd /path/to/your/deployment/dir
+            docker compose up -d --force-recreate app
+            docker image prune -f
+          EOF
+
+      - name: Wait for service initialization
+        run: sleep 10
+
+      - name: Run Verification Script
+        run: |
+          chmod +x ./verify-deploy.sh
+          ./verify-deploy.sh target_vm_ip 80
