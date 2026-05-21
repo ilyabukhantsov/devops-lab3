@@ -1,7 +1,9 @@
 #!/bin/bash
 TARGET_IP=$1
 PORT=$2
-URL="http://${TARGET_IP}:${PORT}"
+
+API_PATH="/api/notes"
+URL="http://${TARGET_IP}:${PORT}${API_PATH}"
 
 RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "${URL}")
 
@@ -12,7 +14,8 @@ else
     exit 1
 fi
 
-SERVER_HEADER=$(curl -sI "${URL}" | grep -i "Server:" | tr -d '\r')
+ROOT_URL="http://${TARGET_IP}:${PORT}"
+SERVER_HEADER=$(curl -sI "${ROOT_URL}" | grep -i "Server:" | tr -d '\r')
 
 if [[ "$SERVER_HEADER" == *"nginx"* ]]; then
     echo "Web server: OK ($SERVER_HEADER)"
