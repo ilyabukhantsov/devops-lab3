@@ -2,7 +2,8 @@
 TARGET_IP=$1
 PORT=$2
 
-API_PATH="/api/notes"
+# Використовуємо знайдений робочий ендпоінт
+API_PATH="/health/ready"
 URL="http://${TARGET_IP}:${PORT}${API_PATH}"
 
 RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "${URL}")
@@ -14,6 +15,7 @@ else
     exit 1
 fi
 
+# Для перевірки заголовка Nginx б'ємо в корінь сервера
 ROOT_URL="http://${TARGET_IP}:${PORT}"
 SERVER_HEADER=$(curl -sI "${ROOT_URL}" | grep -i "Server:" | tr -d '\r')
 
