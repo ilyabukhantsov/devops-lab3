@@ -27,7 +27,7 @@ public final class NoteController {
     private final NoteService noteService;
 
     /**
-     * Construct a new NoteController.
+     * Constructs a new NoteController.
      * @param service the note service dependency
      */
     public NoteController(final NoteService service) {
