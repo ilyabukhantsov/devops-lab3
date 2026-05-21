@@ -97,4 +97,3 @@ public final class NoteController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }
-
